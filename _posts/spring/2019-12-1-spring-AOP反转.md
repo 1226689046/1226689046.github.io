@@ -90,3 +90,71 @@ public interface iUser {
 
 但是如果目标类没有接口，则会使用cglib代理。
 
+动态代理和cglib代理是自动切换的。
+
+#### 各种api
+
+- **@Aspect**               指定一个类为切面类
+- **@Pointcut("execution(\* cn.itcast.e_aop_anno.\*.\*(..))")  指定切入点表达式**
+- **@Before("pointCut_()")**         前置通知: 目标方法之前执行
+- **@After("pointCut_()")**         **后置通知：目标方法之后执行（始终执行）**
+- @AfterReturning("pointCut_()")       返回后通知： **执行方法结束前执行(异常不执行)**
+- @AfterThrowing("pointCut_()")       异常通知:  出现异常时候执行
+- @Around("pointCut_()")         环绕通知： 环绕目标方法执行
+
+#### 优化
+
+```java
+@Pointcut("execution(* aop.*.*(..))")
+public void printTxt(){
+    
+}
+```
+
+调用的时候，使用方法名（）这样就可以调用这个切入表达式
+
+```xml
+<bean id="userDao" class="aop.UserDao"/>
+<bean id="noInterfaceUser" class="aop.NoInterfaceUser"/>
+<bean id="aop" class="aop.AOP"/>
+<!--配置切面-->
+<aop:config>
+    <!--配置切入点-->
+    <aop:pointcut id="pointCut" expression="execution(* aop.*.*(..))"/> 
+    <!--配置切入信息-->
+    <aop:aspect ref="aop">  
+    	<aop:before method="begin" pointcut-ref="pointCut"/>    
+    	<aop:after method="end" pointcut-ref="pointCut"/>  
+    </aop:aspect>
+</aop:config>
+```
+
+#### 切入点表达式
+
+```xml
+ 【拦截所有public方法】 
+    <aop:pointcut expression="execution(public * *(..))" id="pt"/>
+
+     【拦截所有save开头的方法 】 
+    <aop:pointcut expression="execution(* save*(..))" id="pt"/>
+
+     【拦截指定类的指定方法, 拦截时候一定要定位到方法】 
+    <aop:pointcut expression="execution(public * cn.itcast.g_pointcut.OrderDao.save(..))" id="pt"/>
+
+     【拦截指定类的所有方法】 
+    <aop:pointcut expression="execution(* cn.itcast.g_pointcut.UserDao.*(..))" id="pt"/>
+
+     【拦截指定包，以及其自包下所有类的所有方法】 
+    <aop:pointcut expression="execution(* cn..*.*(..))" id="pt"/>
+
+     【多个表达式】 
+    <aop:pointcut expression="execution(* cn.itcast.g_pointcut.UserDao.save()) || execution(* cn.itcast.g_pointcut.OrderDao.save())" id="pt"/>
+    <aop:pointcut expression="execution(* cn.itcast.g_pointcut.UserDao.save()) or execution(* cn.itcast.g_pointcut.OrderDao.save())" id="pt"/>
+     下面2个且关系的，没有意义 
+    <aop:pointcut expression="execution(* cn.itcast.g_pointcut.UserDao.save()) &amp;&amp; execution(* cn.itcast.g_pointcut.OrderDao.save())" id="pt"/>
+    <aop:pointcut expression="execution(* cn.itcast.g_pointcut.UserDao.save()) and execution(* cn.itcast.g_pointcut.OrderDao.save())" id="pt"/>
+
+     【取非值】 
+    <aop:pointcut expression="!execution(* cn.itcast.g_pointcut.OrderDao.save())" id="pt"/>
+```
+
