@@ -175,3 +175,96 @@ Spring的事务控制是数据Spring Dao模块的。
   - 编程式事务控制
 
   - 声明式事务控制
+
+##### 编程式事务
+
+自己动手去控制，就叫【编程式事务】
+
+jdbc:
+
+conn.setAutoCommite(false);//设置手动控制事务
+
+- **【细粒度的事务控制： 可以对指定的方法、指定的方法的某几行添加事务控制】**
+- **(比较灵活，但开发起来比较繁琐： 每次都要开启、提交、回滚.)**
+
+##### 声明式事务
+
+在Spring中，提供的事务控制就是声明式事务
+
+Spring提供了对事务控制的实现。
+
+- 如果用户想要使用Spring的事务控制，**只需要配置就行了**。
+
+- 当不用Spring事务的时候，直接移除就行了。
+
+- Spring的事务控制是**基于AOP实现的**。因此它的**耦合度是非常低**的。
+
+- 【粗粒度的事务控制： **只能给整个方法应用事务，不可以对方法的某几行应用事务。**】
+
+- - (因为aop拦截的是方法。)
+
+**Spring给我们提供了事务的管理器类**，事务管理器类又分为两种，因为**JDBC的事务和Hibernate的事务是不一样的**。
+
+- Spring声明式事务管理器类：
+
+- - Jdbc技术：DataSourceTransactionManager
+  - Hibernate技术：HibernateTransactionManager
+
+1. xml配置spring控制事务
+
+   > 第一步：配置事务管理器
+   >
+   > ```xml
+   > <bean id="txManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">   
+   >     <property name="dataSource" ref="dataSource"/>
+   > </bean>
+   > ```
+   >
+   > 第二步：配置管理方式
+   >
+   > ```xml
+   > <tx:advice id="txAdvice" transaction-manager="txManager">       
+   >     <tx:attributes>
+   >         <!--            配置所有的方法，并不是只读-->          
+   >         <tx:method name="*" read-only="false"/>     
+   >     </tx:attributes>  
+   > </tx:advice>
+   > ```
+   >
+   > 第三步：配置切入点
+   >
+   > ```xml
+   > <aop:config>   
+   >     <aop:pointcut id="pt" expression="execution(* aop.UserService.*(..))"/>  
+   >     <aop:advisor advice-ref="txAdvice" pointcut-ref="pt"/>
+   > </aop:config>
+   > ```
+   >
+   > 这样就可以完成事务管理。如果执行的方法报错，就会回滚
+
+2. 以注解的方式配置Spring事务
+
+   > 第一步和XML的是一样的，**必须配置事务管理器类：**
+   >
+   > ```xml
+   >     <!--1.配置事务的管理器类:JDBC-->   
+   > <bean id="txManage" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">   
+   >     <!--引用数据库连接池-->        
+   >     <property name="dataSource" ref="dataSource"/> 
+   > </bean>
+   > ```
+   >
+   > 第二步：开启以注解的方式来实现事务控制
+   >
+   > ```xml
+   >     <!--开启以注解的方式实现事务控制-->   
+   > <tx:annotation-driven transaction-manager="txManage"/>
+   > ```
+   >
+   > 最后，**想要控制哪个方法事务，在其前面添加@Transactional这个注解就行了！**如果想要控制整个类的事务，那么在类上面添加就行了。
+   >
+   > 
+
+   ##### 事务属性
+
+   
