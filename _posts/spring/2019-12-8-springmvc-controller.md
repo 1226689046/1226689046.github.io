@@ -149,4 +149,43 @@ public class HelloController {
     }
 ```
 
-返回的时候添加一个关键字就可以了
+返回的时候添加一个关键字就可以了：redirect
+
+
+
+#### 返回json数据和处理json数据
+
+- **jackson-core-asl-1.9.11.jar**
+- **jackson-mapper-asl-1.9.11.jar**
+
+在需要返回json的方法上添加注解： @ResponseBody
+
+```java
+ @RequestMapping(value = "/getUser.action")
+    @ResponseBody()
+    public User getUser(){
+        User u = new User();
+        u.setUsername("username");
+        u.setPassword("password");
+        return u;
+    }
+```
+
+配置JSON适配器
+
+```xml
+<bean class="org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter"
+          p:ignoreDefaultModelOnRedirect="true" >
+        <property name="messageConverters">
+            <list>
+                <bean class="org.springframework.http.converter.json.MappingJackson2HttpMessageConverter"/>
+            </list>
+        </property>
+    </bean>
+```
+
+一直配置不上是因为spring3.1后有变动，需要使用此类
+
+返回值就可以使json类型了
+
+如果传递过来的是json，那么久需要使用@RequestBody来给参数打注解。
