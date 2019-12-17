@@ -160,6 +160,8 @@ public class HelloController {
 
 在需要返回json的方法上添加注解： @ResponseBody
 
+这个方法很灵活，返回Map List  List<Bean> 都会走动解析成json数据。
+
 ```java
  @RequestMapping(value = "/getUser.action")
     @ResponseBody()
@@ -188,4 +190,27 @@ public class HelloController {
 
 返回值就可以使json类型了
 
+
+
 如果传递过来的是json，那么久需要使用@RequestBody来给参数打注解。
+
+如：
+
+```java
+  @RequestMapping(value = "/sendJSONParam.action")
+    public String sendParam(@RequestBody User u){
+        System.out.println(u);
+        return "success";
+    }
+```
+
+请求的时候，请求头应该是application/json
+
+```python
+    data='{"username":123,"password":123}'
+    header={
+        'Content-Type': 'application/json'
+    }
+    url="http://localhost:8080/sendJSONParam.action"
+    print(requests.post(url=url, data=data,headers=header).content.decode())
+```
