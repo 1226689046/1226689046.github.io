@@ -8,134 +8,216 @@ categories: spring
 description: SpringMVC
 ---
 
-# SpringMVC 【数据绑定、参数回显、文件上传】
+## SpringMVC【校验器、统一处理异常、RESTful、拦截器】
 
-Spring中默认支持的参数类型：
+#### 一、校验器
 
-- **HttpServletRequest**
-- **HttpServletResponse**
-- **HttpSession**
-- **Model**
+1. jar包
 
-需要进行自定义参数绑定的地方：日期类型的转换等等。
-
-## 自定义参数转换器 **Converter**
-
-1. 配置日期转换器
-
-   想要完成什么功能，就直接在重载方法里写就可以了。并且支持泛型。
-
-   ```java
-   public class CustomDateConver implements Converter<String, Date> {
-       @Override
-       public Date convert(String source) {
-           try {
-               return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(source);
-           } catch (ParseException e) {
-               e.printStackTrace();
-           }
-           return null;
-       }
-   }
-   ```
-
-2. 配置转换器
-
-   转换器声明了写的所有转换器conver，使用一个工厂bean的参数
-
-   webbinder 将请求绑定在转换器上
-
-   适配器是
+   
 
 ```xml
-<!--转换器-->
-    <bean id="converRegister" class="org.springframework.format.support.FormattingConversionServiceFactoryBean">
-        <property name="converters">
-            <list>
-                <bean class="parambind.CustomDateConver"/>
-                <bean class="parambind.StringTrimConver"/>
-            </list>
-        </property>
-    </bean>
-<!--    定义webBinder-->
-    <bean id="customBinder" class="org.springframework.web.bind.support.ConfigurableWebBindingInitializer">
-        <property name="conversionService" ref="converRegister"/>
+<dependency>
+            <groupId>org.hibernate</groupId>
+            <artifactId>hibernate-validator</artifactId>
+            <version>6.1.0.Final</version>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/org.jboss.logging/jboss-logging -->
+        <dependency>
+            <groupId>org.jboss.logging</groupId>
+            <artifactId>jboss-logging</artifactId>
+            <version>3.4.1.Final</version>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/javax.validation/validation-api -->
+        <dependency>
+            <groupId>javax.validation</groupId>
+            <artifactId>validation-api</artifactId>
+            <version>2.0.1.Final</version>
+        </dependency>
+```
+
+##### 配置校验器
+
+```xml
+
+<!--    校验器配置区域-->
+    <bean id="validator" class="org.springframework.validation.beanvalidation.LocalValidatorFactoryBean">
+<!--        校验器-->
+        <property name="providerClass" value="org.hibernate.validator.HibernateValidator"/>
+        <property name="validationMessageSource" ref="messageSource"/>
     </bean>
 
-<!--    注解适配器-->
-    <bean class="org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter">
+
+
+
+<!--    错误信息-->
+    <bean id="messageSource" class="org.springframework.context.support.ReloadableResourceBundleMessageSource">
+<!--        资源文件-->
+        <property name="basenames">
+            <list>
+                <value>classpath:CustomValidationMessages</value>
+            </list>
+        </property>
+        <property name="fileEncodings" value="utf-8"/>
+<!--        缓存时间-->
+        <property name="cacheSeconds" value="120"/>
+    </bean>
+
+
+
+
+然后定义webBinder
+ <!--    定义webBinder-->
+        <bean id="customBinder" class="org.springframework.web.bind.support.ConfigurableWebBindingInitializer">
+            <property name="conversionService" ref="converRegister"/>
+
+
+<!--            将校验器添加到webBinder中
+个人感觉这个方法是启动的时候会调用。。这个类-->
+            <property name="validator" ref="validator"/>
+        </bean>
+
+
+
+
+将WebBinder添加到适配器中
+<bean class="org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter"
+          p:ignoreDefaultModelOnRedirect="true">
+        <property name="messageConverters">
+            <list>
+                <bean class="org.springframework.http.converter.json.MappingJackson2HttpMessageConverter"/>
+            </list>
+        </property>
         <property name="webBindingInitializer" ref="customBinder"/>
     </bean>
 ```
 
-如果是使用driven 则如此：
+在resource文件夹下搞定CustomValidationMessages文件
 
-```xml
-<mvc:annotation-driven conversion-service="conversionService">
-    </mvc:annotation-driven>
-    <!-- conversionService -->
-    <bean id="conversionService"
-          class="org.springframework.context.support.ConversionServiceFactoryBean">
-        <!-- 转换器 -->
-        <property name="converters">
-            <list>
-                <bean class="parambind.CustomDateConver"/>
-                <bean class="parambind.StringTrimConver"/>
-            </list>
-        </property>
-    </bean>
+```
+items.name.length.error=长度不匹配
+items.cratetime.is.notnull=不可以为空
 ```
 
-注意，像RequestMappingHandlerAdapter和mvc:annotation-driven这样的，只需要声明一个。需要进行合并。
+在bean中，可以这样写
 
-一直没有走转换器的原因就是配置了两个注解适配器。，上一个注解适配器是为@ResponseBody准备的。
+```java
+package parambind;
 
-这种情况会自动匹配Converter<String,Date> 如果来源是String,目标是Date，则会自动经过这个转换器。
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
+import java.util.Date;
+
+public class GoodBean {
+    private Integer id;
+    //商品名称的长度请限制在1到30个字符
+    @Size(min = 1, max = 30, message = "{items.name.length.error}")
+    private String name;
+
+    private Float price;
+
+    private String pic;
+
+    //请输入商品生产日期
+    @NotNull(message = "{items.createtime.is.notnull}")
+    private Date createtime;
+
+    private String detail;
+
+    public Integer getId() {
+        return id;
+    }
+
+    public void setId(Integer id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name == null ? null : name.trim();
+    }
+
+    public Float getPrice() {
+        return price;
+    }
+
+    public void setPrice(Float price) {
+        this.price = price;
+    }
+
+    public String getPic() {
+        return pic;
+    }
+
+    public void setPic(String pic) {
+        this.pic = pic == null ? null : pic.trim();
+    }
+
+    public Date getCreatetime() {
+        return createtime;
+    }
+
+    public void setCreatetime(Date createtime) {
+        this.createtime = createtime;
+    }
+
+    public String getDetail() {
+        return detail;
+    }
+
+    public void setDetail(String detail) {
+        this.detail = detail == null ? null : detail.trim();
+    }
+
+    @Override
+    public String toString() {
+        return "GoodBean{" +
+                "id=" + id +
+                ", name='" + name + '\'' +
+                ", price=" + price +
+                ", pic='" + pic + '\'' +
+                ", createtime=" + createtime +
+                ", detail='" + detail + '\'' +
+                '}';
+    }
+}
+
+```
+
+在需要校验的字段上，都打上注解，然后使用message来获取上面那个文件中的文件信息
 
 
 
-#### 文件上传
 
-在SpringMVC中文件上传需要用到的jar包
 
-- **commons-fileupload-1.2.2.jar**
-- **commons-io-2.4.jar**
+##### 分组校验
 
-1. 配置上传解析器**id必须为这个名字，否则会报错**
+分组校验使得校验方式更加灵活。有时候并不需要把当前配置的所有的属性都给校验，而是当前方法执行某些校验。
 
-   ```xml
-   
-       <bean id="multipartResolver" class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
-           <property name="maxUploadSize">
-               <value>5242880</value>
-           </property>
-       </bean>
-   ```
 
-   
 
-2. ```java
-    @RequestMapping("/upload.action")
-       public void upload(MultipartFile picture){
-           System.out.println(getClass().getClassLoader().getResource("/").getPath());
-           try {
-               picture.transferTo(new File("E:\\blog\\miemiemie\\springstudy\\img\\pic.txt"));
-           } catch (IOException e) {
-               e.printStackTrace();
-           }
-       }
-   ```
+步骤：
 
-   使用MultipartFile来进行获取。注意：参数名称和Input的name必须是一样的。
+- 定义分组的接口【主要是标识】
+- 定义校验规则用于哪一组
+- 在Controller中使用校验分组
 
-3. form表单，注意enctype
+首先，写一个接口：
 
-4. 
+```java
+//用于校验某某组
+public interface ValidateGroup {
+}
 
-5. ```html
-   <form action="/upload.action"  method="post" enctype="multipart/form-data">
-       <input type="file" name="picture">
-       <input type="submit" value="提交">
-   </form>
-   ```
+```
 
+该接口主要是为了做一个标志，谁谁谁属于这个组。
+
+第二步，在属性值上比如@NotNull中加上group={ValidateGroup.class}
+
+第三步，在@Validated中加上 value={ValidateGroup.class}
+
+这样就可以完成分组校验
