@@ -221,3 +221,110 @@ public interface ValidateGroup {
 第三步，在@Validated中加上 value={ValidateGroup.class}
 
 这样就可以完成分组校验
+
+
+
+
+
+### 二、统一异常处理类
+
+实现处理类
+
+```java
+
+public class CustomExceptionHandler implements HandlerExceptionResolver {
+
+    /*
+        http请求->dispatcherServlet->handler(controller)->service->mapper  异常全都向上抛出。之后会经过统一异常处理类(实现HandlerExceptionResolver接口)
+     */
+    //前端控制器DispatcherServlet在进行HandlerMapping、调用HandlerAdapter执行Handler过程中，如果遇到异常就会执行此方法
+    //handler最终要执行的Handler，它的真实身份是HandlerMethod
+    //Exception ex就是接收到异常信息
+
+    @Override
+    public ModelAndView resolveException(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Object o, Exception e) {
+        e.printStackTrace();
+        System.out.println("出错了");
+        return new ModelAndView();
+    }
+}
+
+```
+
+配置统一异常处理器
+
+```xml
+<bean class="parambind.CustomExceptionHandler"/>
+```
+
+
+
+
+
+#### 三、RESTful
+
+- **每一个URI代表一种资源；**
+- **客户端和服务器之间，传递这种资源的某种表现层；**
+- **客户端通过四个HTTP动词，对服务器端资源进行操作，实现"表现层状态转化"**。
+
+这种开发理念是对http的非常好的诠释。
+
+非RESTful   http://localhost/aaa/t.action?id=1
+
+RESTful       http://localhost/aaa/t/1
+
+使用这种风格（理念）步骤：
+
+1. 更改requestDispatcher  以前是actioin  现在要拦截所有的。
+
+   ```xml
+   <!-- 注册springmvc框架核心控制器 -->
+       <servlet>
+           <servlet-name>DispatcherServlet</servlet-name>
+           <servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
+   
+           <!--到类目录下寻找我们的配置文件-->
+           <init-param>
+               <param-name>contextConfigLocation</param-name>
+               <param-value>classpath:restful.xml</param-value>
+           </init-param>
+       </servlet>
+       <servlet-mapping>
+           <servlet-name>DispatcherServlet</servlet-name>
+           <!--映射的路径为.action-->
+           <url-pattern>/</url-pattern>
+       </servlet-mapping>
+   ```
+
+2. Controller这样写
+
+   ```java
+   @Controller
+   @RequestMapping("/rest")
+   public class RestFulController {
+   
+       @RequestMapping("/user/{id}")
+       @ResponseBody
+       public String t(@PathVariable("id")String id){
+           System.out.println(id);
+           return id;
+       }
+   }
+   
+   ```
+
+3. **当DispatcherServlet拦截/开头的所有请求，对静态资源的访问就报错：我们需要配置对静态资源的解析**
+
+```xml
+    <mvc:resources location="/js/" mapping="/js/**" />
+    <mvc:resources location="/img/" mapping="/img/**" />
+```
+
+`/**`就表示不管有多少层，都对其进行解析，`/*`代表的是当前层的所有资源..
+
+
+
+
+
+### 四、Spring拦截器
+
