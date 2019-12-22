@@ -328,3 +328,58 @@ RESTful       http://localhost/aaa/t/1
 
 ### 四、Spring拦截器
 
+SpringMVC也有拦截器的。
+
+**用户请求到DispatherServlet中，DispatherServlet调用HandlerMapping查找Handler，HandlerMapping返回一个拦截的链儿（多个拦截），springmvc中的拦截器是通过HandlerMapping发起的。**
+
+
+
+```xml
+<!--    配置拦截器-->
+    <mvc:interceptors>
+        <!--        配置多个拦截器，将会按照顺序执行-->
+        <mvc:interceptor>
+            <mvc:mapping path="/**"/>
+            <bean class="restful.CustomHandlerInterceptor"/>
+        </mvc:interceptor>
+    </mvc:interceptors>
+```
+
+```java
+
+public class CustomHandlerInterceptor implements HandlerInterceptor {
+
+    //在执行Handler之前，用于进行用户的校验
+    @Override
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+        //如果返回false则拦截，不继续执行handler
+        System.out.println("preHandle");
+        //如果返回true则直接放行
+        return false;
+    }
+
+    //在执行handler返回ModelAndView之前。
+    //如果需要向页面提供一些公用 的数据或配置一些视图信息，使用此方法实现 从modelAndView入手
+    @Override
+    public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, ModelAndView modelAndView) throws Exception {
+        System.out.println("postHandler");
+    }
+
+    //执行handler之后执行此方法
+    //主要进行日志的操作，进行方法执行性能监控，在preHandle中设置一个时间点，在afterCompletion设置一个时间，两个时间点的差就是执行时长
+    @Override
+    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
+        System.out.println("afterCompletion");
+    }
+}
+
+```
+
+注意：需要添加
+
+```xml
+<mvc:annotation-driven/>
+```
+
+注解，否则会失效。
+
