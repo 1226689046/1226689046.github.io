@@ -280,6 +280,15 @@ public interface LuckMoneyDao extends JpaRepository<Luckymoney,Integer> {
 里面封装了很多，不需要写任何sql语句就可以实现查询，很方便。
 
 ```java
+package com.example.springbootdemo.controller;
+
+import com.example.springbootdemo.Luckymoney;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Optional;
 
 @RestController
 public class LuckyMoneyController {
@@ -312,11 +321,56 @@ public class LuckyMoneyController {
         return luckMoneyDao.findById(id).orElse(null);
 //        return luckMoneyDao.getOne(id);
     }
+
+    @PutMapping("/luckmoneys")
+    public Luckymoney update(@RequestParam("receiver")String receiver,@RequestParam("id")Integer id){
+        //先从数据库中查询出来
+        Optional<Luckymoney> lst = luckMoneyDao.findById(id);
+        //查询是否存在
+        if(lst.isPresent()){
+            //获取一个
+            Luckymoney luckymoney = lst.get();
+            luckymoney.setReceiver(receiver);
+            luckymoney.setId(id);
+            return luckMoneyDao.save(luckymoney);
+        }
+        return null;
+    }
 }
 
 ```
 
-#### 三、优点
+
+
+##### 事务
+
+在service层，需要添加事务的方法添加一个注解即可。
+
+```java
+
+@Service
+public class LuckyMoneyService {
+    @Autowired
+    private LuckMoneyDao luckMoneyDao;
+
+    @Transactional
+    public void createTwo(){
+        Luckymoney luckymoney = new Luckymoney();
+        luckymoney.setSender("啊哈荣");
+        luckymoney.setMoney(new BigDecimal(520));
+        luckMoneyDao.save(luckymoney);
+        Luckymoney luckymoney1 = new Luckymoney();
+        luckymoney1.setSender("啊哈荣");
+        luckymoney1.setMoney(new BigDecimal(1314));
+        luckMoneyDao.save(luckymoney1);
+
+    }
+}
+```
+
+并且数据库是要支持事务的。（mysql选择innodb）
+
+#### 三、优点 
 
 
 
